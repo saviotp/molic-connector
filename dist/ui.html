@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 14px 16px 16px;
+    font: 12px/1.4 Inter, system-ui, sans-serif;
+    color: var(--figma-color-text, #222);
+    background: var(--figma-color-bg, #fff);
+  }
+  h1 { font-size: 13px; font-weight: 600; margin: 0 0 2px; }
+  .hint { color: var(--figma-color-text-secondary, #777); font-weight: 400; }
+  p.hint { margin: 0 0 12px; }
+  .status {
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: var(--figma-color-bg-secondary, #f3f3f3);
+    margin-bottom: 6px;
+    min-height: 34px;
+  }
+  .status b { font-weight: 600; }
+  label.field { display: block; font-weight: 600; margin: 12px 0 6px; }
+  .seg { display: flex; gap: 4px; }
+  .seg input { display: none; }
+  .seg label {
+    flex: 1;
+    text-align: center;
+    padding: 6px 4px;
+    border: 1px solid var(--figma-color-border, #ddd);
+    border-radius: 6px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .seg input:checked + label {
+    border-color: var(--figma-color-border-brand-strong, #0d99ff);
+    background: var(--figma-color-bg-brand-tertiary, #e5f4ff);
+    font-weight: 600;
+  }
+  .row { display: flex; gap: 6px; align-items: center; }
+  .speaker { width: 64px; flex: none; }
+  input[type="text"], select {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--figma-color-border, #ddd);
+    border-radius: 6px;
+    background: var(--figma-color-bg, #fff);
+    color: inherit;
+    font: inherit;
+  }
+  input[type="text"]:focus, select:focus { outline: 2px solid var(--figma-color-border-brand-strong, #0d99ff); outline-offset: -1px; }
+  .seg svg { display: block; margin: 0 auto 2px; }
+
+  /* Seletor de ponto de saída/chegada */
+  .anchors { display: flex; gap: 10px; }
+  .anchor { flex: 1; }
+  .anchor .title { font-weight: 600; margin-bottom: 4px; }
+  .picker { display: block; width: 100%; cursor: crosshair; }
+  .picker .box { fill: var(--figma-color-bg-secondary, #f3f3f3); stroke: var(--figma-color-border-strong, #999); }
+  .picker .hit { fill: transparent; }
+  .picker .dot { fill: var(--figma-color-bg-brand, #0d99ff); }
+  .picker .auto-text { font-size: 10px; fill: var(--figma-color-text-secondary, #777); text-anchor: middle; }
+  .anchor-info { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; min-height: 18px; }
+  .linklike { border: 0; background: none; padding: 0; color: var(--figma-color-text-brand, #0d99ff); cursor: pointer; font: inherit; font-weight: 400; flex: none; }
+  input[type="range"] { width: 100%; margin: 4px 0 0; }
+
+  .mixed { font-style: italic; color: var(--figma-color-text-secondary, #777); }
+  .buttons { display: flex; gap: 6px; margin-top: 16px; }
+  button.btn {
+    flex: 1;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--figma-color-border, #ddd);
+    background: var(--figma-color-bg, #fff);
+    color: inherit;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.primary {
+    border-color: transparent;
+    background: var(--figma-color-bg-brand, #0d99ff);
+    color: var(--figma-color-text-onbrand, #fff);
+  }
+  button:disabled { opacity: 0.4; cursor: default; }
+  .hidden { display: none !important; }
+  footer {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--figma-color-border, #e5e5e5);
+  }
+  footer label { display: block; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+  <h1>MoLIC Connector</h1>
+  <p class="hint">Falas de transição que seguem as cenas quando você as move.</p>
+
+  <div class="status" id="status">Selecione dois elementos: primeiro a origem, depois o destino.</div>
+
+  <label class="field">Tipo de fala</label>
+  <div class="seg" data-key="kind">
+    <input type="radio" name="kind" id="k-t" value="transicao" /><label for="k-t">Transição<br><small>linha contínua</small></label>
+    <input type="radio" name="kind" id="k-r" value="ruptura" /><label for="k-r">Recuperação de ruptura<br><small>linha tracejada</small></label>
+  </div>
+
+  <label class="field" for="text">Fala</label>
+  <div class="row">
+    <select id="speaker" class="speaker" title="Quem fala">
+      <option value="u">u:</option>
+      <option value="d">d:</option>
+      <option value="" disabled hidden>vários</option>
+    </select>
+    <input type="text" id="text" placeholder="ex.: resposta ao processo" />
+  </div>
+
+  <label class="field" for="precond">Precondição <span class="hint">(opcional)</span></label>
+  <input type="text" id="precond" placeholder="ex.: estar cadastrado no sistema" />
+
+  <label class="field">Rota</label>
+  <div class="seg" data-key="route">
+    <input type="radio" name="route" id="r-s" value="straight" /><label for="r-s">
+      <svg width="36" height="18" viewBox="0 0 36 18" fill="none" stroke="currentColor"><path d="M3 15 L33 3"/></svg>Reta</label>
+    <input type="radio" name="route" id="r-o" value="orthogonal" /><label for="r-o">
+      <svg width="36" height="18" viewBox="0 0 36 18" fill="none" stroke="currentColor"><path d="M3 15 H18 V3 H33"/></svg>Ortogonal</label>
+    <input type="radio" name="route" id="r-c" value="curve" /><label for="r-c">
+      <svg width="36" height="18" viewBox="0 0 36 18" fill="none" stroke="currentColor"><path d="M3 15 C18 15 18 3 33 3"/></svg>Curva</label>
+  </div>
+
+  <label class="field">Pontos de conexão <span class="hint">(clique na borda; no centro = automático)</span></label>
+  <div class="anchors">
+    <div class="anchor" id="start"><div class="title">Saída <span class="hint">(origem)</span></div></div>
+    <div class="anchor" id="end"><div class="title">Chegada <span class="hint">(destino)</span></div></div>
+  </div>
+
+  <div class="buttons" id="createButtons">
+    <button class="btn primary" id="create" disabled>Conectar</button>
+  </div>
+  <div class="buttons hidden" id="editButtons">
+    <button class="btn primary" id="apply" disabled>Aplicar</button>
+    <button class="btn" id="swap" title="Trocar origem e destino">Inverter direção</button>
+  </div>
+
+  <footer>
+    <label><input type="checkbox" id="auto" checked /> Atualizar ao mover as cenas</label>
+    <button class="btn" id="reroute" style="width:100%">Redesenhar todas as setas da página</button>
+  </footer>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const send = (msg) => parent.postMessage({ pluginMessage: msg }, "*");
+
+  // Valores atuais (sempre concretos) e campos que estão "vários" ou foram alterados pelo usuário.
+  const state = {
+    kind: "transicao", speaker: "u", text: "", precond: "", route: "orthogonal",
+    startSide: "auto", startT: 0.5, endSide: "auto", endT: 0.5,
+  };
+  let mixed = new Set();
+  let dirty = new Set();
+  let mode = "other";
+  let count = 0;
+
+  const SIDE_NAMES = { auto: "automático", top: "topo", right: "direita", bottom: "base", left: "esquerda" };
+
+  // ------------------------------------------------ seletor de ponto (uma caixa clicável)
+  const W = 132, H = 70, PAD = 10, EDGE = 14;
+  function buildPicker(which) {
+    const root = $(which);
+    root.insertAdjacentHTML("beforeend", `
+      <svg class="picker" viewBox="0 0 ${W} ${H}">
+        <rect class="hit" x="0" y="0" width="${W}" height="${H}"/>
+        <rect class="box" x="${PAD}" y="${PAD}" width="${W - 2 * PAD}" height="${H - 2 * PAD}" rx="6"/>
+        <text class="auto-text" x="${W / 2}" y="${H / 2 + 3}"></text>
+        <circle class="dot" r="4"/>
+      </svg>
+      <input type="range" min="0" max="100" step="5" />
+      <div class="anchor-info"><span class="label"></span><button class="linklike">auto</button></div>`);
+
+    const svg = root.querySelector("svg");
+    const range = root.querySelector("input");
+    const sideKey = which + "Side", tKey = which + "T";
+
+    svg.addEventListener("click", (e) => {
+      const r = svg.getBoundingClientRect();
+      const x = ((e.clientX - r.left) / r.width) * W;
+      const y = ((e.clientY - r.top) / r.height) * H;
+      const bx = PAD, by = PAD, bw = W - 2 * PAD, bh = H - 2 * PAD;
+      // Distância até cada lado; perto de um lado = esse lado; longe de todos = automático.
+      const d = { left: Math.abs(x - bx), right: Math.abs(x - (bx + bw)), top: Math.abs(y - by), bottom: Math.abs(y - (by + bh)) };
+      const side = Object.keys(d).sort((a, b) => d[a] - d[b])[0];
+      if (d[side] > EDGE) return set({ [sideKey]: "auto", [tKey]: 0.5 });
+      const along = side === "left" || side === "right" ? (y - by) / bh : (x - bx) / bw;
+      const t = Math.round(Math.min(1, Math.max(0, along)) * 20) / 20; // passos de 5%
+      set({ [sideKey]: side, [tKey]: t });
+    });
+    range.addEventListener("input", () => set({ [tKey]: Number(range.value) / 100 }));
+    root.querySelector(".linklike").addEventListener("click", () => set({ [sideKey]: "auto", [tKey]: 0.5 }));
+  }
+
+  function drawPicker(which) {
+    const root = $(which);
+    const side = state[which + "Side"], t = state[which + "T"];
+    const isMixed = mixed.has(which + "Side") || mixed.has(which + "T");
+    const dot = root.querySelector(".dot");
+    const range = root.querySelector("input");
+    const label = root.querySelector(".label");
+    const autoText = root.querySelector(".auto-text");
+    const bx = PAD, by = PAD, bw = W - 2 * PAD, bh = H - 2 * PAD;
+
+    const showDot = !isMixed && side !== "auto";
+    dot.classList.toggle("hidden", !showDot);
+    if (showDot) {
+      const p = { left: [bx, by + bh * t], right: [bx + bw, by + bh * t], top: [bx + bw * t, by], bottom: [bx + bw * t, by + bh] }[side];
+      dot.setAttribute("cx", p[0]);
+      dot.setAttribute("cy", p[1]);
+    }
+    autoText.textContent = isMixed ? "vários" : side === "auto" ? "automático" : "";
+    range.classList.toggle("hidden", isMixed || side === "auto");
+    range.value = Math.round(t * 100);
+    label.className = "label" + (isMixed ? " mixed" : "");
+    label.textContent = isMixed ? "vários" : side === "auto" ? "lado automático" : `${SIDE_NAMES[side]}, ${Math.round(t * 100)}%`;
+  }
+
+  // ------------------------------------------------ formulário
+
+  function set(changes) {
+    for (const [k, v] of Object.entries(changes)) {
+      state[k] = v;
+      mixed.delete(k);
+      dirty.add(k);
+    }
+    // Ao fixar um lado, a posição dele passa a valer também.
+    if ("startSide" in changes) { mixed.delete("startT"); dirty.add("startT"); }
+    if ("endSide" in changes) { mixed.delete("endT"); dirty.add("endT"); }
+    render();
+  }
+
+  function render() {
+    for (const key of ["kind", "route"]) {
+      document.querySelectorAll(`input[name="${key}"]`).forEach((el) => {
+        el.checked = !mixed.has(key) && el.value === state[key];
+      });
+    }
+    $("speaker").value = mixed.has("speaker") ? "" : state.speaker;
+    for (const key of ["text", "precond"]) {
+      const el = $(key);
+      if (document.activeElement !== el) el.value = mixed.has(key) ? "" : state[key];
+      el.placeholder = mixed.has(key) ? "vários (deixe vazio para manter)" : el.dataset.placeholder;
+    }
+    drawPicker("start");
+    drawPicker("end");
+    $("apply").disabled = dirty.size === 0;
+    $("apply").textContent = mode === "connectors" && count > 1 ? `Aplicar a ${count} setas` : "Aplicar";
+    $("swap").textContent = mode === "connectors" && count > 1 ? `Inverter ${count} setas` : "Inverter direção";
+  }
+
+  for (const id of ["text", "precond"]) $(id).dataset.placeholder = $(id).placeholder;
+  document.querySelectorAll('input[name="kind"], input[name="route"]').forEach((el) =>
+    el.addEventListener("change", () => set({ [el.name]: el.value })));
+  $("speaker").addEventListener("change", () => set({ speaker: $("speaker").value }));
+  $("text").addEventListener("input", () => set({ text: $("text").value }));
+  $("precond").addEventListener("input", () => set({ precond: $("precond").value }));
+  buildPicker("start");
+  buildPicker("end");
+
+  const escape = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  onmessage = (e) => {
+    const msg = e.data.pluginMessage;
+    if (!msg || msg.type !== "selection") return;
+
+    mode = msg.mode;
+    count = msg.count || 0;
+    dirty = new Set();
+    mixed = new Set();
+
+    const editing = mode === "connectors";
+    $("createButtons").classList.toggle("hidden", editing);
+    $("editButtons").classList.toggle("hidden", !editing);
+    $("create").disabled = mode !== "two";
+
+    if (editing) {
+      for (const [k, v] of Object.entries(msg.style)) {
+        if (v === null) mixed.add(k);
+        else state[k] = v;
+      }
+      $("status").innerHTML = count === 1
+        ? "<b>Editando 1 seta.</b> Altere os campos e clique em Aplicar."
+        : `<b>Editando ${count} setas.</b> Só os campos que você alterar serão aplicados a todas.`;
+    } else if (mode === "two") {
+      $("status").innerHTML = `Origem: <b>${escape(msg.names[0])}</b><br>Destino: <b>${escape(msg.names[1])}</b>`;
+    } else if (msg.mixed) {
+      $("status").textContent = "Para editar em lote, selecione só setas (sem cenas junto).";
+    } else {
+      $("status").textContent = "Selecione dois elementos: primeiro a origem, depois o destino (Shift + clique). Ou selecione setas para editá-las.";
+    }
+    $("text").blur();
+    $("precond").blur();
+    render();
+  };
+
+  function patch() {
+    const p = {};
+    for (const k of dirty) {
+      // Em lote, um texto "vários" deixado vazio significa "não mexer".
+      if ((k === "text" || k === "precond") && mixed.has(k)) continue;
+      p[k] = state[k];
+    }
+    return p;
+  }
+
+  $("create").onclick = () => send({ type: "create", style: { ...state } });
+  $("apply").onclick = () => send({ type: "apply", patch: patch() });
+  $("swap").onclick = () => send({ type: "swap" });
+  $("reroute").onclick = () => send({ type: "reroute" });
+  $("auto").onchange = (e) => send({ type: "auto", auto: e.target.checked });
+  for (const id of ["text", "precond"]) {
+    $(id).onkeydown = (e) => {
+      if (e.key !== "Enter") return;
+      if (mode === "connectors") { if (!$("apply").disabled) $("apply").click(); }
+      else if (!$("create").disabled) $("create").click();
+    };
+  }
+
+  render();
+</script>
+</body>
+</html>

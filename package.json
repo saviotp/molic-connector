@@ -1,0 +1,26 @@
+{
+  "name": "molic-connector",
+  "version": "1.1.0",
+  "description": "Falas de transição conectadas (retas, ortogonais e curvas) para diagramas MoLIC no Figma.",
+  "scripts": {
+    "build": "tsc && esbuild src/code.ts --bundle --target=es2017 --outfile=dist/code.js && node -e \"require('fs').copyFileSync('src/ui.html','dist/ui.html')\"",
+    "watch": "esbuild src/code.ts --bundle --target=es2017 --outfile=dist/code.js --watch",
+    "test": "node --experimental-strip-types --no-warnings --test test/*.test.ts"
+  },
+  "keywords": [
+    "figma",
+    "figma-plugin",
+    "molic",
+    "engenharia-semiotica",
+    "ihc",
+    "hci"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.142.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2"
+  },
+  "private": true
+}
